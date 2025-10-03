@@ -1,28 +1,32 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { listService } from '../src/services/listService';
-import { ShoppingList } from '../src/services/types';
+import { useAuth } from '../../src/services/AuthProvider';
+import { listService } from '../../src/services/listService';
+import { ShoppingList } from '../../src/services/types';
 
 export default function ListsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // Carregar listas (simulando usuário logado com ID 1)
   const loadLists = async () => {
+    if (!user) return;
+    
     try {
-      const userLists = await listService.getUserLists(1); // ID temporário
+      const userLists = await listService.getUserLists(user.id);
       setLists(userLists);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível carregar as listas');
@@ -36,7 +40,7 @@ export default function ListsScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadLists();
-    }, [])
+    }, [user?.id])
   );
 
   const handleRefresh = () => {

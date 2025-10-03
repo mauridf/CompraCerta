@@ -11,11 +11,13 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { itemService, listService } from '../src/services/listService';
-import { ListItem, ShoppingList } from '../src/services/types';
+import { useAuth } from '../../src/services/AuthProvider';
+import { itemService, listService } from '../../src/services/listService';
+import { ListItem, ShoppingList } from '../../src/services/types';
 
 export default function ListItemsScreen() {
     const router = useRouter();
+    const { user } = useAuth();
     const params = useLocalSearchParams();
     const listId = parseInt(params.id as string);
     const listName = params.name as string;
@@ -111,6 +113,10 @@ export default function ListItemsScreen() {
     const [paidAmount, setPaidAmount] = useState('');
 
     const handleCompleteList = () => {
+        if (!user) { // ✅ VERIFICAÇÃO
+            Alert.alert('Erro', 'Usuário não autenticado');
+            return;
+        }
         if (items.length === 0) {
             Alert.alert('Lista Vazia', 'Adicione itens antes de finalizar a compra');
             return;

@@ -1,21 +1,23 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { listService } from '../src/services/listService';
+import { useAuth } from '../../src/services/AuthProvider';
+import { listService } from '../../src/services/listService';
 
 export default function ListCreateScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams();
   
   // Se tiver ID, é edição. Se não, é criação.
@@ -26,6 +28,11 @@ export default function ListCreateScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
+    if (!user) { // ✅ VERIFICAÇÃO
+      Alert.alert('Erro', 'Usuário não autenticado');
+      return;
+    }
+
     if (!listName.trim()) {
       Alert.alert('Erro', 'Por favor, digite um nome para a lista');
       return;
@@ -55,7 +62,7 @@ export default function ListCreateScreen() {
         }
       } else {
         // Criar nova lista (usando ID temporário do usuário)
-        const newListId = await listService.createList(1, listName.trim());
+        const newListId = await listService.createList(user.id, listName.trim());
         
         if (newListId > 0) {
           Alert.alert('Sucesso', 'Lista criada com sucesso!', [

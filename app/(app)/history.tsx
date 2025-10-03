@@ -10,8 +10,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { listService } from '../src/services/listService';
-import { ShoppingList } from '../src/services/types';
+import { listService } from '../../src/services/listService';
+import { ShoppingList } from '../../src/services/types';
 
 export default function HistoryScreen() {
     const router = useRouter();
