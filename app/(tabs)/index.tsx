@@ -57,7 +57,12 @@ export default function HomeScreen() {
         >
           <Text style={styles.menuItemText}>📋 Minhas Listas</Text>
         </TouchableOpacity>
-        <Text style={styles.menuItem}>📊 Histórico</Text>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/history')}
+        >
+          <Text style={styles.menuItemText}>📊 Histórico de Compras</Text>
+        </TouchableOpacity>
         <Text style={styles.menuItem}>⚙️ Configurações</Text>
       </View>
 

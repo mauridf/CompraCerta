@@ -114,10 +114,10 @@ export default function ListItemsScreen() {
 
         const totalEstimated = calculateTotal();
         
-        // ✅ CORREÇÃO: Alert.prompt simplificado para debugging
-        Alert.alert(
+        // ✅ AGORA FUNCIONANDO: Alert.prompt com tipo correto
+        Alert.prompt(
             'Finalizar Compra',
-            `Total estimado: ${formatCurrency(totalEstimated)}\n\nClique em OK para testar (valor fixo R$ ${formatCurrency(totalEstimated + 10)})`,
+            `Total estimado: ${formatCurrency(totalEstimated)}\n\nDigite o valor real pago no caixa:`,
             [
                 {
                     text: 'Cancelar',
@@ -125,35 +125,51 @@ export default function ListItemsScreen() {
                 },
                 {
                     text: 'Finalizar',
-                    onPress: async () => {
-                        try {
-                            // Usando valor fixo para teste (10 reais a mais)
-                            const paidAmount = totalEstimated + 10;
-                            
-                            const success = await listService.completeList(listId, paidAmount);
-                            if (success) {
-                                Alert.alert(
-                                    'Sucesso!', 
-                                    `Compra finalizada!\n\nEstimado: ${formatCurrency(totalEstimated)}\nPago: ${formatCurrency(paidAmount)}\nDiferença: ${formatCurrency(paidAmount - totalEstimated)}`,
-                                    [
-                                        { 
-                                            text: 'OK', 
-                                            onPress: () => {
-                                                loadListData(); // Recarrega os dados
-                                            }
-                                        }
-                                    ]
-                                );
-                            } else {
-                                Alert.alert('Erro', 'Não foi possível finalizar a compra');
-                            }
-                        } catch (error) {
-                            console.error('Erro ao finalizar:', error);
-                            Alert.alert('Erro', 'Ocorreu um erro ao finalizar a compra');
+                    onPress: (finalAmount) => {
+                        if (!finalAmount) {
+                            Alert.alert('Erro', 'Por favor, digite o valor pago');
+                            return;
                         }
+
+                        const paidAmount = parseFloat(finalAmount.replace(',', '.'));
+                        if (isNaN(paidAmount) || paidAmount <= 0) {
+                            Alert.alert('Erro', 'Digite um valor válido');
+                            return;
+                        }
+
+                        // Função assíncrona separada
+                        const completePurchase = async () => {
+                            try {
+                                const success = await listService.completeList(listId, paidAmount);
+                                if (success) {
+                                    Alert.alert(
+                                        'Sucesso!', 
+                                        `Compra finalizada!\n\nEstimado: ${formatCurrency(totalEstimated)}\nPago: ${formatCurrency(paidAmount)}\nDiferença: ${formatCurrency(paidAmount - totalEstimated)}`,
+                                        [
+                                            { 
+                                                text: 'OK', 
+                                                onPress: () => {
+                                                    loadListData(); // Recarrega os dados
+                                                }
+                                            }
+                                        ]
+                                    );
+                                } else {
+                                    Alert.alert('Erro', 'Não foi possível finalizar a compra');
+                                }
+                            } catch (error) {
+                                console.error('Erro ao finalizar:', error);
+                                Alert.alert('Erro', 'Ocorreu um erro ao finalizar a compra');
+                            }
+                        };
+
+                        completePurchase();
                     },
                 },
-            ]
+            ],
+            'plain-text',
+            '',
+            'numeric'
         );
     };
 
