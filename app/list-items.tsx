@@ -7,6 +7,7 @@ import {
     StatusBar,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -106,70 +107,64 @@ export default function ListItemsScreen() {
         return items.reduce((total, item) => total + item.total, 0);
     };
 
+    const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+    const [paidAmount, setPaidAmount] = useState('');
+
     const handleCompleteList = () => {
         if (items.length === 0) {
             Alert.alert('Lista Vazia', 'Adicione itens antes de finalizar a compra');
             return;
         }
+        
+        setPaidAmount(''); // Reset do valor
+        setShowFinalizeModal(true); // Abre o modal
+    };
+
+    const handleConfirmFinalize = async () => {
+        if (!paidAmount || paidAmount.trim() === '') {
+            Alert.alert('Erro', 'Por favor, digite o valor pago');
+            return;
+        }
 
         const totalEstimated = calculateTotal();
         
-        Alert.prompt(
-            'Finalizar Compra',
-            `Total estimado: ${formatCurrency(totalEstimated)}\n\nDigite o valor real pago no caixa:`,
-            [
-                {
-                    text: 'Cancelar',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Finalizar',
-                    onPress: (finalAmount: string | undefined) => { // ✅ CORREÇÃO: Tipo explícito
-                        if (!finalAmount) {
-                            Alert.alert('Erro', 'Por favor, digite o valor pago');
-                            return;
-                        }
+        // Limpar e converter o valor
+        const cleanAmount = paidAmount.replace(',', '.').replace(/[^\d.]/g, '');
+        const paidValue = parseFloat(cleanAmount);
+        
+        if (isNaN(paidValue) || paidValue <= 0) {
+            Alert.alert('Erro', 'Digite um valor válido maior que zero');
+            return;
+        }
 
-                        const paidAmount = parseFloat(finalAmount.replace(',', '.'));
-                        if (isNaN(paidAmount) || paidAmount <= 0) {
-                            Alert.alert('Erro', 'Digite um valor válido');
-                            return;
-                        }
-
-                        // Função assíncrona separada
-                        const completePurchase = async () => {
-                            try {
-                                const success = await listService.completeList(listId, paidAmount);
-                                if (success) {
-                                    Alert.alert(
-                                        'Sucesso!', 
-                                        `Compra finalizada!\n\nEstimado: ${formatCurrency(totalEstimated)}\nPago: ${formatCurrency(paidAmount)}\nDiferença: ${formatCurrency(paidAmount - totalEstimated)}`,
-                                        [
-                                            { 
-                                                text: 'OK', 
-                                                onPress: () => {
-                                                    loadListData(); // Recarrega os dados
-                                                }
-                                            }
-                                        ]
-                                    );
-                                } else {
-                                    Alert.alert('Erro', 'Não foi possível finalizar a compra');
-                                }
-                            } catch (error) {
-                                console.error('Erro ao finalizar:', error);
-                                Alert.alert('Erro', 'Ocorreu um erro ao finalizar a compra');
+        try {
+            const success = await listService.completeList(listId, paidValue);
+            if (success) {
+                Alert.alert(
+                    'Sucesso!', 
+                    `Compra finalizada!\n\nEstimado: ${formatCurrency(totalEstimated)}\nPago: ${formatCurrency(paidValue)}\nDiferença: ${formatCurrency(paidValue - totalEstimated)}`,
+                    [
+                        { 
+                            text: 'OK', 
+                            onPress: () => {
+                                setShowFinalizeModal(false);
+                                loadListData(); // Recarrega os dados
                             }
-                        };
+                        }
+                    ]
+                );
+            } else {
+                Alert.alert('Erro', 'Não foi possível finalizar a compra');
+            }
+        } catch (error) {
+            console.error('Erro ao finalizar:', error);
+            Alert.alert('Erro', 'Ocorreu um erro ao finalizar a compra');
+        }
+    };
 
-                        completePurchase();
-                    },
-                },
-            ],
-            'plain-text',
-            '',
-            'numeric'
-        );
+    const handleCancelFinalize = () => {
+        setShowFinalizeModal(false);
+        setPaidAmount('');
     };
 
     const handleReactivateList = async () => {
@@ -327,6 +322,45 @@ export default function ListItemsScreen() {
                 )}
             />
 
+            {/* Modal de Finalização - SOLUÇÃO DEFINITIVA */}
+            {showFinalizeModal && (
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Finalizar Compra</Text>
+                        
+                        <Text style={styles.modalSubtitle}>
+                            Total estimado: {formatCurrency(calculateTotal())}
+                        </Text>
+                        
+                        <Text style={styles.modalLabel}>Digite o valor real pago no caixa:</Text>
+                        
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="0,00"
+                            value={paidAmount}
+                            onChangeText={setPaidAmount}
+                            keyboardType="decimal-pad"
+                            autoFocus
+                        />
+                        
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity 
+                                style={[styles.modalButton, styles.modalCancelButton]}
+                                onPress={handleCancelFinalize}
+                            >
+                                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                                style={[styles.modalButton, styles.modalConfirmButton]}
+                                onPress={handleConfirmFinalize}
+                            >
+                                <Text style={styles.modalConfirmButtonText}>Finalizar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            )}
             {/* Botão Flutuante */}
             <TouchableOpacity 
                 style={styles.fab}
@@ -554,6 +588,88 @@ const styles = StyleSheet.create({
     fabText: {
         color: 'white',
         fontSize: 24,
+        fontWeight: 'bold',
+    },
+    modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        margin: 20,
+        padding: 24,
+        borderRadius: 16,
+        width: '90%',
+        maxWidth: 400,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    modalSubtitle: {
+        fontSize: 16,
+        color: '#4CAF50',
+        fontWeight: '600',
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    modalLabel: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 8,
+    },
+    modalInput: {
+        borderWidth: 2,
+        borderColor: '#DDD',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 18,
+        backgroundColor: '#FAFAFA',
+        marginBottom: 20,
+        textAlign: 'center',
+        fontWeight: 'bold',
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    modalButton: {
+        flex: 1,
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    modalCancelButton: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#DDD',
+    },
+    modalConfirmButton: {
+        backgroundColor: '#4CAF50',
+    },
+    modalCancelButtonText: {
+        color: '#666',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    modalConfirmButtonText: {
+        color: 'white',
+        fontSize: 16,
         fontWeight: 'bold',
     },
 });
