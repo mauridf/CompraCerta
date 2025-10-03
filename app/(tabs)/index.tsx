@@ -51,7 +51,12 @@ export default function HomeScreen() {
 
       <View style={styles.menu}>
         <Text style={styles.menuItem}>📝 Criar Nova Lista</Text>
-        <Text style={styles.menuItem}>📋 Minhas Listas</Text>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/lists')}
+        >
+          <Text style={styles.menuItemText}>📋 Minhas Listas</Text>
+        </TouchableOpacity>
         <Text style={styles.menuItem}>📊 Histórico</Text>
         <Text style={styles.menuItem}>⚙️ Configurações</Text>
       </View>
@@ -122,18 +127,20 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   menuItem: {
-    fontSize: 16,
-    color: '#333',
     padding: 15,
     backgroundColor: 'white',
     marginBottom: 10,
     borderRadius: 8,
-    textAlign: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
   },
   loginButton: {
     backgroundColor: '#2196F3',
