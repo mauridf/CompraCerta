@@ -114,7 +114,6 @@ export default function ListItemsScreen() {
 
         const totalEstimated = calculateTotal();
         
-        // ✅ AGORA FUNCIONANDO: Alert.prompt com tipo correto
         Alert.prompt(
             'Finalizar Compra',
             `Total estimado: ${formatCurrency(totalEstimated)}\n\nDigite o valor real pago no caixa:`,
@@ -125,7 +124,7 @@ export default function ListItemsScreen() {
                 },
                 {
                     text: 'Finalizar',
-                    onPress: (finalAmount) => {
+                    onPress: (finalAmount: string | undefined) => { // ✅ CORREÇÃO: Tipo explícito
                         if (!finalAmount) {
                             Alert.alert('Erro', 'Por favor, digite o valor pago');
                             return;
