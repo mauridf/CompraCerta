@@ -1,50 +1,159 @@
-# Welcome to your Expo app 👋
+# 📱 CompraCerta
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo móvel para gestão de listas de compras. Permite criar, editar e reaproveitar listas, registrar itens com preços e quantidades, escanear códigos de barras e calcular o total em tempo real. Agora também permite registrar o **valor final pago no caixa**, possibilitando comparar com o valor estimado e manter histórico confiável. Focado em ser **offline-first**, simples e leve.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Tecnologias
+- **React Native + Expo** (cross-platform e leve)
+- **TypeScript**
+- **SQLite** (persistência local com `expo-sqlite`)
+- **Zustand** (gerenciamento de estado)
+- **React Navigation** (navegação entre telas)
+- **Expo Barcode Scanner** (scanner de código de barras)
+- **Expo SecureStore** (armazenamento seguro de credenciais)
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+## 📂 Estrutura do Projeto
+```
+/CompraCerta
+  /assets
+  /src
+    /components
+    /screens
+      LoginScreen.tsx
+      RegisterScreen.tsx
+      HomeScreen.tsx
+      ListScreen.tsx
+      ItemScreen.tsx
+      ScannerScreen.tsx
+      HistoryScreen.tsx
+    /services
+      database.ts
+      authService.ts
+      listService.ts
+    /store
+    /utils
+    App.tsx
+  app.json
+  package.json
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## 🗄️ Banco de Dados (SQLite)
 
-To learn more about developing your project with Expo, look at the following resources:
+### Tabelas principais
+```sql
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+CREATE TABLE shopping_lists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  status TEXT DEFAULT 'active',
+  total_amount REAL DEFAULT 0,   -- valor estimado pelo app
+  final_amount REAL,             -- valor pago informado no caixa
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
 
-## Join the community
+CREATE TABLE list_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  list_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  quantity REAL DEFAULT 1,
+  unit TEXT,
+  unit_price REAL DEFAULT 0,
+  total REAL DEFAULT 0,
+  is_checked BOOLEAN DEFAULT FALSE,
+  barcode TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (list_id) REFERENCES shopping_lists(id)
+);
+```
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 📱 Funcionalidades
+- [x] Cadastro/Login de usuário (local, senha com hash)
+- [x] Criar, editar e excluir listas de compras
+- [x] Adicionar, editar, excluir e marcar itens como comprados
+- [x] Cálculo automático de totais
+- [x] Scanner de código de barras (opcional)
+- [x] Finalização de lista (grava total estimado e valor pago real)
+- [x] Histórico de compras com comparação **estimado vs. pago**
+- [x] Reaproveitar listas anteriores
+
+---
+
+## 🛠️ Instalação e Execução
+
+### Pré-requisitos
+- Node.js LTS
+- npm ou yarn
+- VSCode
+
+### Passos
+```bash
+# Clonar o repositório
+git clone https://github.com/seu-usuario/compra-certa.git
+cd compra-certa
+
+# Instalar dependências
+npm install
+
+# Instalar libs Expo
+npx expo install expo-sqlite expo-barcode-scanner expo-secure-store
+npm install zustand @react-navigation/native @react-navigation/native-stack
+npx expo install react-native-gesture-handler react-native-reanimated react-native-screens react-native-safe-area-context @react-native-community/masked-view
+
+# Rodar projeto
+npx expo start
+```
+
+Abra no celular com **Expo Go** (Android/iOS) ou no navegador (modo web).
+
+---
+
+## 🎨 UI/UX
+- Interface simples e responsiva
+- Paleta de cores:
+  - Primária: #4CAF50 (verde)
+  - Secundária: #2196F3 (azul)
+  - Sucesso: #8BC34A (verde claro)
+  - Atenção: #FFC107 (amarelo)
+  - Erro: #F44336 (vermelho)
+  - Fundo: #F5F5F5 (cinza claro)
+  - Texto: #212121 (cinza escuro)
+
+---
+
+## ✅ Testes
+- Fluxo completo: Cadastro → Criar lista → Adicionar itens → Marcar comprados → Inserir preços → Finalizar lista → Registrar valor pago.
+- Testes de cálculo de totais.
+- Comparação estimado vs. pago.
+- Scanner em dispositivo real.
+- Reaproveitamento de listas.
+
+---
+
+## 🗺️ Roadmap Futuro
+- Exportar/importar listas (CSV)
+- Sincronização em nuvem (Firebase ou Supabase)
+- Relatórios de economia (diferença estimado vs. pago)
+- Compartilhamento de listas entre usuários
+- Notificações (lembrar lista ao sair de casa)
+
+---
+
+## 📜 Licença
+Este projeto é open source sob a licença MIT.
