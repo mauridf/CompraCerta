@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -32,9 +32,12 @@ export default function ListsScreen() {
     }
   };
 
-  useEffect(() => {
-    loadLists();
-  }, []);
+  // ✅ CORREÇÃO 1: Recarregar sempre que a tela ganhar foco
+  useFocusEffect(
+    React.useCallback(() => {
+      loadLists();
+    }, [])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -45,14 +48,20 @@ export default function ListsScreen() {
     router.push('/list-create');
   };
 
+  // ✅ CORREÇÃO 2: Agora abre a tela de itens da lista
   const handleListPress = (list: ShoppingList) => {
-    router.push(`/list-items?id=${list.id}&name=${list.name}`);
+    router.push(`/list-items?id=${list.id}&name=${encodeURIComponent(list.name)}`);
   };
 
+  // ✅ CORREÇÃO 3: Botão de exclusão visível
   const handleDeleteList = (listId: number, listName: string) => {
     Alert.alert(
       'Excluir Lista',
-      `Tem certeza que deseja excluir "${listName}"?`,
+      `Tem certeza que deseja excluir "${listName}"?${
+        lists.find(l => l.id === listId)?.status === 'completed' 
+          ? '\n\nEsta lista já foi finalizada.' 
+          : ''
+      }`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
@@ -60,10 +69,25 @@ export default function ListsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const success = await listService.deleteList(listId);
-              if (success) {
-                setLists(lists.filter(list => list.id !== listId));
-                Alert.alert('Sucesso', 'Lista excluída com sucesso');
+              // ✅ Verificar se a lista tem itens antes de excluir
+              const listToDelete = lists.find(l => l.id === listId);
+              if (listToDelete && listToDelete.total_amount > 0) {
+                Alert.alert(
+                  'Lista com Itens',
+                  'Esta lista contém itens. Deseja excluir mesmo assim?',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { 
+                      text: 'Excluir Tudo', 
+                      style: 'destructive',
+                      onPress: async () => {
+                        await performDelete(listId);
+                      }
+                    }
+                  ]
+                );
+              } else {
+                await performDelete(listId);
               }
             } catch (error) {
               Alert.alert('Erro', 'Não foi possível excluir a lista');
@@ -72,6 +96,16 @@ export default function ListsScreen() {
         }
       ]
     );
+  };
+
+  const performDelete = async (listId: number) => {
+    const success = await listService.deleteList(listId);
+    if (success) {
+      setLists(lists.filter(list => list.id !== listId));
+      Alert.alert('Sucesso', 'Lista excluída com sucesso');
+    } else {
+      Alert.alert('Erro', 'Não foi possível excluir a lista');
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -123,7 +157,6 @@ export default function ListsScreen() {
           <TouchableOpacity 
             style={styles.listCard}
             onPress={() => handleListPress(item)}
-            onLongPress={() => handleDeleteList(item.id, item.name)}
           >
             <View style={styles.listHeader}>
               <Text style={styles.listName}>{item.name}</Text>
@@ -172,6 +205,14 @@ export default function ListsScreen() {
                 </Text>
               </View>
             )}
+
+            {/* ✅ CORREÇÃO 3: Botão de exclusão visível */}
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={() => handleDeleteList(item.id, item.name)}
+            >
+              <Text style={styles.deleteButtonText}>🗑️ Excluir</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
       />
@@ -337,5 +378,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  deleteButton: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#F44336',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
