@@ -11,9 +11,9 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { useAuth } from '../../src/services/AuthProvider';
-import { itemService, listService } from '../../src/services/listService';
-import { ListItem, ShoppingList } from '../../src/services/types';
+import { useAuth } from '../src/services/AuthProvider';
+import { itemService, listService } from '../src/services/listService';
+import { ListItem, ShoppingList } from '../src/services/types';
 
 export default function ListItemsScreen() {
     const router = useRouter();

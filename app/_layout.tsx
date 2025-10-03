@@ -7,10 +7,13 @@ export default function RootLayout() {
     <AuthProvider>
       <DatabaseProvider>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(app)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
+          <Stack.Screen name="list-create" options={{ headerShown: false }} />
+          <Stack.Screen name="list-items" options={{ headerShown: false }} />
+          <Stack.Screen name="item-create" options={{ headerShown: false }} />
+          <Stack.Screen name="history" options={{ headerShown: false }} />
         </Stack>
       </DatabaseProvider>
     </AuthProvider>
