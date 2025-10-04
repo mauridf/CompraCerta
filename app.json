@@ -22,13 +22,18 @@
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#4CAF50"
       },
-      "package": "com.seunome.compracerta"
+      "package": "com.seunome.compracerta",
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/images/logo.png"
     },
-    "plugins": [
-      "expo-barcode-scanner"
-    ]
+    "extra": {
+      "eas": {
+        "projectId": "19e09e56-185b-421b-8cb0-691024a82f82"
+      }
+    }
   }
 }
