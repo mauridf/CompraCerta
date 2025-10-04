@@ -1,24 +1,33 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
-import { authService } from '../src/services/authService';
+import { useAuth } from '../src/services/AuthProvider';
 
 export default function LoginScreen() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { login, user } = useAuth();
+  const router = useRouter();
+
+  // Se já está logado, redirecionar
+  React.useEffect(() => {
+    if (user) {
+      router.replace('/(tabs)');
+    }
+  }, [user]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -26,21 +35,19 @@ export default function LoginScreen() {
       return;
     }
 
-    setLoading(true);
-    
+    setIsLoading(true);
     try {
-      const user = await authService.login(email, password);
-      
-      if (user) {
-        Alert.alert('Sucesso', `Bem-vindo, ${user.name}!`);
-        router.replace('/(tabs)'); // Volta para a tela inicial
+      const success = await login(email, password);
+      if (success) {
+        // O redirecionamento será automático pelo _layout.tsx
+        console.log('Login bem-sucedido, redirecionando...');
       } else {
-        Alert.alert('Erro', 'Email ou senha incorretos');
+        Alert.alert('Erro', 'Email ou senha inválidos');
       }
     } catch (error) {
-      Alert.alert('Erro', 'Falha no login. Tente novamente.');
+      Alert.alert('Erro', 'Ocorreu um erro ao fazer login');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -53,69 +60,52 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="dark-content" />
-      
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>CompraCerta</Text>
+          <Text style={styles.title}>🛒 CompraCerta</Text>
           <Text style={styles.subtitle}>Faça login na sua conta</Text>
         </View>
 
-        {/* Formulário */}
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="seu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholderTextColor="#999"
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Senha</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Sua senha"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Senha"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholderTextColor="#999"
+          />
 
           <TouchableOpacity 
-            style={[styles.loginButton, loading && styles.buttonDisabled]}
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>
-              {loading ? 'Entrando...' : 'Entrar'}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.loginButtonText}>Entrar</Text>
+            )}
           </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
-          </View>
 
           <TouchableOpacity 
             style={styles.registerButton}
             onPress={handleRegister}
           >
-            <Text style={styles.registerButtonText}>Criar nova conta</Text>
+            <Text style={styles.registerButtonText}>
+              Não tem uma conta? Cadastre-se
+            </Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Gerencie suas listas de compras de forma inteligente
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -127,7 +117,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  scrollContent: {
+  scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
@@ -156,20 +146,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
   input: {
     borderWidth: 1,
     borderColor: '#DDD',
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
+    marginBottom: 16,
     fontSize: 16,
     backgroundColor: '#FAFAFA',
   },
@@ -178,50 +160,22 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  loginButtonDisabled: {
+    backgroundColor: '#A5D6A7',
   },
   loginButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#EEE',
-  },
-  dividerText: {
-    marginHorizontal: 15,
-    color: '#999',
-    fontSize: 14,
-  },
   registerButton: {
-    borderWidth: 1,
-    borderColor: '#4CAF50',
     padding: 16,
-    borderRadius: 8,
     alignItems: 'center',
   },
   registerButtonText: {
     color: '#4CAF50',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: 30,
-  },
-  footerText: {
     fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
   },
 });

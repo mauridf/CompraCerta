@@ -113,7 +113,7 @@ export default function ListItemsScreen() {
     const [paidAmount, setPaidAmount] = useState('');
 
     const handleCompleteList = () => {
-        if (!user) { // ✅ VERIFICAÇÃO
+        if (!user) {
             Alert.alert('Erro', 'Usuário não autenticado');
             return;
         }
@@ -122,8 +122,8 @@ export default function ListItemsScreen() {
             return;
         }
         
-        setPaidAmount(''); // Reset do valor
-        setShowFinalizeModal(true); // Abre o modal
+        setPaidAmount('');
+        setShowFinalizeModal(true);
     };
 
     const handleConfirmFinalize = async () => {
@@ -134,7 +134,6 @@ export default function ListItemsScreen() {
 
         const totalEstimated = calculateTotal();
         
-        // Limpar e converter o valor
         const cleanAmount = paidAmount.replace(',', '.').replace(/[^\d.]/g, '');
         const paidValue = parseFloat(cleanAmount);
         
@@ -154,7 +153,7 @@ export default function ListItemsScreen() {
                             text: 'OK', 
                             onPress: () => {
                                 setShowFinalizeModal(false);
-                                loadListData(); // Recarrega os dados
+                                loadListData();
                             }
                         }
                     ]
@@ -265,7 +264,7 @@ export default function ListItemsScreen() {
                     )}
                 </View>
 
-                {/* Instrução para editar itens */}
+                {/* CORREÇÃO: Garantir que o texto de instrução esteja dentro de <Text> */}
                 {items.length > 0 && list?.status === 'active' && (
                     <Text style={styles.instruction}>
                         💡 Toque longo em um item para editar • Toque para marcar/desmarcar
@@ -300,6 +299,7 @@ export default function ListItemsScreen() {
                                 styles.checkbox,
                                 item.is_checked && styles.checkedCheckbox
                             ]}>
+                                {/* CORREÇÃO: Texto do checkmark dentro de <Text> */}
                                 {item.is_checked && <Text style={styles.checkmark}>✓</Text>}
                             </View>
                             
@@ -308,11 +308,11 @@ export default function ListItemsScreen() {
                                     styles.itemName,
                                     item.is_checked && styles.checkedText
                                 ]}>
-                                    {item.name}
+                                    {item.name || 'Item sem nome'}
                                 </Text>
                                 
                                 <Text style={styles.itemDetails}>
-                                    {item.quantity} {item.unit || 'un'}
+                                    {item.quantity || 0} {item.unit || 'un'}
                                     {item.unit_price > 0 && ` • ${formatCurrency(item.unit_price)}`}
                                 </Text>
                             </View>
@@ -322,13 +322,13 @@ export default function ListItemsScreen() {
                             styles.itemTotal,
                             item.is_checked && styles.checkedText
                         ]}>
-                            {formatCurrency(item.total)}
+                            {formatCurrency(item.total || 0)}
                         </Text>
                     </TouchableOpacity>
                 )}
             />
 
-            {/* Modal de Finalização - SOLUÇÃO DEFINITIVA */}
+            {/* Modal de Finalização */}
             {showFinalizeModal && (
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -367,6 +367,7 @@ export default function ListItemsScreen() {
                     </View>
                 </View>
             )}
+
             {/* Botão Flutuante */}
             <TouchableOpacity 
                 style={styles.fab}
@@ -597,15 +598,15 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
     },
     modalContent: {
         backgroundColor: 'white',

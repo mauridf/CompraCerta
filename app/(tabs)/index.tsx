@@ -1,14 +1,70 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../src/services/AuthProvider';
+import { listService } from '../../src/services/listService';
+
+interface Statistics {
+  activeLists: number;
+  totalSaved: number;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [stats, setStats] = useState<Statistics>({ activeLists: 0, totalSaved: 0 });
+  const [loading, setLoading] = useState(true);
+
+  const loadStatistics = async () => {
+    if (!user) return;
+    
+    try {
+      const userLists = await listService.getUserLists(user.id);
+      
+      // Calcular estatísticas
+      const activeLists = userLists.filter(list => list.status === 'active').length;
+      
+      const totalSaved = userLists
+        .filter(list => list.status === 'completed' && list.final_amount && list.total_amount)
+        .reduce((total, list) => {
+          const saved = list.total_amount - list.final_amount!;
+          return total + (saved > 0 ? saved : 0);
+        }, 0);
+
+      setStats({
+        activeLists,
+        totalSaved
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ CORREÇÃO: useEffect deve vir ANTES de qualquer retorno condicional
+  useEffect(() => {
+    if (user) {
+      loadStatistics();
+    }
+  }, [user?.id]);
+
+  // Se não tem usuário, mostrar loading (será redirecionado pelo _layout)
+  if (!user) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text>Verificando autenticação...</Text>
+      </View>
+    );
+  }
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toFixed(2)}`.replace('.', ',');
   };
 
   return (
@@ -29,7 +85,7 @@ export default function HomeScreen() {
       <View style={styles.menu}>
         <TouchableOpacity 
           style={styles.menuItem}
-          onPress={() => router.push('/(app)/lists')}
+          onPress={() => router.push('/(tabs)/lists')}
         >
           <Text style={styles.menuItemText}>📋 Minhas Listas</Text>
           <Text style={styles.menuItemDescription}>Gerencie suas listas de compras</Text>
@@ -37,34 +93,41 @@ export default function HomeScreen() {
 
         <TouchableOpacity 
           style={styles.menuItem}
-          onPress={() => router.push('/(app)/history')}
+          onPress={() => router.push('/(tabs)/history')}
         >
           <Text style={styles.menuItemText}>📊 Histórico</Text>
           <Text style={styles.menuItemDescription}>Veja suas compras finalizadas</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.menuItem}
+          style={[styles.menuItem, styles.newListButton]}
           onPress={() => router.push('/list-create')}
         >
-          <Text style={styles.menuItemText}>➕ Nova Lista</Text>
-          <Text style={styles.menuItemDescription}>Crie uma nova lista de compras</Text>
+          <Text style={styles.newListButtonText}>➕ Nova Lista</Text>
+          <Text style={styles.newListButtonDescription}>Crie uma nova lista de compras</Text>
         </TouchableOpacity>
       </View>
 
       {/* Estatísticas Rápidas */}
       <View style={styles.stats}>
         <Text style={styles.statsTitle}>📈 Suas Estatísticas</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>Listas Ativas</Text>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#4CAF50" />
+            <Text style={styles.loadingText}>Carregando estatísticas...</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>Total Economizado</Text>
+        ) : (
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.activeLists}</Text>
+              <Text style={styles.statLabel}>Listas Ativas</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{formatCurrency(stats.totalSaved)}</Text>
+              <Text style={styles.statLabel}>Total Economizado</Text>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     </View>
   );
@@ -73,6 +136,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F5F5F5',
   },
   header: {
@@ -129,6 +198,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  newListButton: {
+    backgroundColor: '#4CAF50',
+  },
+  newListButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
+  },
+  newListButtonDescription: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
   stats: {
     padding: 20,
     paddingTop: 0,
@@ -165,5 +247,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#666',
   },
 });

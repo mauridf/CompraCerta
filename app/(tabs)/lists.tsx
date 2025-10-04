@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,26 +21,33 @@ export default function ListsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Carregar listas (simulando usuário logado com ID 1)
-  const loadLists = async () => {
-    if (!user) return;
+  // ✅ CORREÇÃO: useCallback para evitar recriações desnecessárias
+  const loadLists = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     try {
+      console.log('Carregando listas para usuário:', user.id);
       const userLists = await listService.getUserLists(user.id);
+      console.log('Listas carregadas:', userLists.length);
       setLists(userLists);
     } catch (error) {
+      console.error('Erro ao carregar listas:', error);
       Alert.alert('Erro', 'Não foi possível carregar as listas');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.id]); // ✅ Dependência correta
 
-  // ✅ CORREÇÃO 1: Recarregar sempre que a tela ganhar foco
+  // ✅ CORREÇÃO: useFocusEffect com useCallback
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
+      console.log('Tela de listas em foco - carregando...');
       loadLists();
-    }, [user?.id])
+    }, [loadLists]) // ✅ Agora depende da função loadLists memoizada
   );
 
   const handleRefresh = () => {
@@ -52,20 +59,14 @@ export default function ListsScreen() {
     router.push('/list-create');
   };
 
-  // ✅ CORREÇÃO 2: Agora abre a tela de itens da lista
   const handleListPress = (list: ShoppingList) => {
     router.push(`/list-items?id=${list.id}&name=${encodeURIComponent(list.name)}`);
   };
 
-  // ✅ CORREÇÃO 3: Botão de exclusão visível
   const handleDeleteList = (listId: number, listName: string) => {
     Alert.alert(
       'Excluir Lista',
-      `Tem certeza que deseja excluir "${listName}"?${
-        lists.find(l => l.id === listId)?.status === 'completed' 
-          ? '\n\nEsta lista já foi finalizada.' 
-          : ''
-      }`,
+      `Tem certeza que deseja excluir "${listName}"?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
@@ -73,26 +74,7 @@ export default function ListsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // ✅ Verificar se a lista tem itens antes de excluir
-              const listToDelete = lists.find(l => l.id === listId);
-              if (listToDelete && listToDelete.total_amount > 0) {
-                Alert.alert(
-                  'Lista com Itens',
-                  'Esta lista contém itens. Deseja excluir mesmo assim?',
-                  [
-                    { text: 'Cancelar', style: 'cancel' },
-                    { 
-                      text: 'Excluir Tudo', 
-                      style: 'destructive',
-                      onPress: async () => {
-                        await performDelete(listId);
-                      }
-                    }
-                  ]
-                );
-              } else {
-                await performDelete(listId);
-              }
+              await performDelete(listId);
             } catch (error) {
               Alert.alert('Erro', 'Não foi possível excluir a lista');
             }
@@ -105,7 +87,7 @@ export default function ListsScreen() {
   const performDelete = async (listId: number) => {
     const success = await listService.deleteList(listId);
     if (success) {
-      setLists(lists.filter(list => list.id !== listId));
+      setLists(prevLists => prevLists.filter(list => list.id !== listId));
       Alert.alert('Sucesso', 'Lista excluída com sucesso');
     } else {
       Alert.alert('Erro', 'Não foi possível excluir a lista');
@@ -120,6 +102,7 @@ export default function ListsScreen() {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  // ✅ CORREÇÃO: Estado de loading melhor tratado
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -210,7 +193,6 @@ export default function ListsScreen() {
               </View>
             )}
 
-            {/* ✅ CORREÇÃO 3: Botão de exclusão visível */}
             <TouchableOpacity 
               style={styles.deleteButton}
               onPress={() => handleDeleteList(item.id, item.name)}
@@ -239,9 +221,14 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: 'white',
@@ -253,7 +240,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: '#333',
     marginBottom: 4,
   },
   subtitle: {
@@ -278,20 +265,19 @@ const styles = StyleSheet.create({
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 8,
   },
   listName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
-    marginRight: 12,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 6,
   },
   activeBadge: {
     backgroundColor: '#E8F5E8',
@@ -312,18 +298,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 8,
   },
   totalText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
   },
   finalText: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#4CAF50',
-    fontWeight: '500',
   },
   differenceContainer: {
     marginTop: 8,
@@ -341,37 +328,42 @@ const styles = StyleSheet.create({
   overspent: {
     color: '#F44336',
   },
+  deleteButton: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#F44336',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   emptyContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
     padding: 40,
   },
   emptyText: {
     fontSize: 18,
     color: '#666',
     marginBottom: 8,
-    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
   fab: {
     position: 'absolute',
     right: 20,
     bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
     backgroundColor: '#4CAF50',
-    alignItems: 'center',
+    borderRadius: 28,
     justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -379,20 +371,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   fabText: {
-    color: 'white',
     fontSize: 24,
+    color: 'white',
     fontWeight: 'bold',
-  },
-  deleteButton: {
-    marginTop: 12,
-    padding: 8,
-    backgroundColor: '#FFEBEE',
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#F44336',
-    fontSize: 14,
-    fontWeight: '500',
   },
 });

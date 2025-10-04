@@ -1,90 +1,107 @@
+import { useRouter } from 'expo-router';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authService } from './authService';
-import { User } from './types';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  login: async () => false,
-  register: async () => false,
-  logout: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
-  children 
-}) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
+  // Verificar se usuário está logado ao iniciar
   useEffect(() => {
-    checkCurrentUser();
+    checkAuthStatus();
   }, []);
 
-  const checkCurrentUser = async () => {
+  const checkAuthStatus = async () => {
     try {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
+      // Simular verificação de autenticação
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simular delay
+      
+      // Por enquanto, sempre começa deslogado
+      setUser(null);
     } catch (error) {
-      console.log('Erro ao verificar usuário:', error);
+      console.error('Erro ao verificar autenticação:', error);
+      setUser(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const user = await authService.login(email, password);
-      if (user) {
-        setUser(user);
+      setIsLoading(true);
+      
+      // Simular API call - substitua pela sua lógica real
+      if (email && password) {
+        const mockUser: User = {
+          id: 1,
+          name: email.split('@')[0], // Nome baseado no email
+          email: email
+        };
+        
+        setUser(mockUser);
+        console.log('Login realizado com sucesso');
         return true;
       }
+      
       return false;
     } catch (error) {
-      console.log('Erro no login:', error);
+      console.error('Erro no login:', error);
       return false;
-    }
-  };
-
-  const register = async (name: string, email: string, password: string): Promise<boolean> => {
-    try {
-      const success = await authService.register(name, email, password);
-      if (success) {
-        // Login automático após cadastro
-        const user = await authService.login(email, password);
-        if (user) {
-          setUser(user);
-          return true;
-        }
-      }
-      return false;
-    } catch (error) {
-      console.log('Erro no cadastro:', error);
-      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = async (): Promise<void> => {
     try {
-      await authService.logout();
+      setIsLoading(true);
+      
+      // Limpar dados do usuário
       setUser(null);
+      
+      console.log('Logout realizado');
+      
+      // O redirecionamento será tratado pelo AppLayout
     } catch (error) {
-      console.log('Erro no logout:', error);
+      console.error('Erro no logout:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const value: AuthContextType = {
+    user,
+    login,
+    logout,
+    isLoading
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+}
