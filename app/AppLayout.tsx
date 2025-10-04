@@ -39,6 +39,7 @@ export default function AppLayout() {
       <Stack.Screen name="list-create" options={{ headerShown: false }} />
       <Stack.Screen name="list-items" options={{ headerShown: false }} />
       <Stack.Screen name="item-create" options={{ headerShown: false }} />
+      <Stack.Screen name="barcode-scanner" options={{ headerShown: false }} />
     </Stack>
   );
 }
